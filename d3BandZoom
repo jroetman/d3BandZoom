@@ -259,4 +259,6 @@
             t.select(".line" + idx).style("stroke", colors[idx]);
         }
     }
-</script>
+  </script>
+  </body>
+</html>
