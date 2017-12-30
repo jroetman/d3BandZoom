@@ -48,7 +48,7 @@
     var data = [];
     var bandPos = [-1, -1];
     var pos;
-    var colors = d3.scale.category10();
+    var colors = d3.scaleOrdinal(d3.schemeCategory10);
 
     //initialized when data is pulled
     var x, y, xDomain, yDomain, xDomainMin, yDomainMin, xAxis, yAxis, zoomArea, line;
