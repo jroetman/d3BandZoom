@@ -1,43 +1,61 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <style>
-  .axis path, .axis line {
-      fill: none;
-      stroke: #000;
-      shape-rendering: crispEdges;
+  .axis path,
+  .axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
   }
+  
   path.line {
-      fill: none;
-      stroke-width: 1px;
+    fill: none;
+    stroke-width: 1px;
+    pointer-events: none;
   }
+  
   .zoomOut {
-      fill: #66a;
-      cursor: pointer;
+    fill: #66a;
+    cursor: pointer;
   }
+  
   .zoomOutText {
-      pointer-events: none;
-      fill : #ccc;
+    pointer-events: none;
+    fill: #ccc;
   }
+  
   .zoomOverlay {
-      pointer-events: all;
-      fill:none;
+    pointer-events: all;
+    fill: none;
   }
+  
   .band {
-      fill : none;
-      stroke-width: 1px;
-      stroke: red;
+    fill: none;
+    stroke-width: 2px;
+    stroke: black;
   }
+
 </style>
+
 <body>
+
+  <button onClick="zoomOut()"> Zoom Out </button>
+  <button onClick="pullData()"> Pull Data </button>
   <div id="graph"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+  </button>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
   <script>
     var data = [];
     var bandPos = [-1, -1];
     var pos;
-    var xdomain = 500;
-    var ydomain = 50;
-    var colors = ["steelblue", "green"];
+    var colors = d3.scale.category10();
+
+    //initialized when data is pulled
+    var x, y, xDomain, yDomain, xDomainMin, yDomainMin, xAxis, yAxis, zoomArea, line;
+    xDomain = 0;
+    yDomain = 0;
+    xDomainMin = 0;
+    yDomainMin = 0;
 
     var margin = {
       top: 40,
@@ -45,27 +63,9 @@
       bottom: 50,
       left: 60
     }
-    var width = 760 - margin.left - margin.right;
+    var width = 900 - margin.left - margin.right;
     var height = 450 - margin.top - margin.bottom;
-    var zoomArea = {
-      x1: 0,
-      y1: 0,
-      x2: xdomain,
-      y2: ydomain
-    };
-    var drag = d3.behavior.drag();
-
-    //data for testing
-    var d1 = [];
-    var d2 = [];
-
-    for (var i = 0; i < xdomain; i++) {
-      d1.push([i, Math.random() * 20 + 10]);
-      d2.push([i, Math.random() * 10 + 10]);
-    }
-
-    data.push(d1);
-    data.push(d2);
+    var drag = d3.drag();
 
     var svg = d3.select("body").append("svg")
       .attr("width", width + margin.left + margin.right)
@@ -74,28 +74,18 @@
       .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 
-    var x = d3.scale.linear()
-      .range([0, width]).domain([0, xdomain]);
+    svg.append("clipPath")
+      .attr("id", "clip")
+      .append("rect")
+      .attr("width", width)
+      .attr("height", height);
 
-    var y = d3.scale.linear()
-      .range([height, 0]).domain([0, ydomain]);
+    var zoomOverlay = svg.append("rect")
+      .attr("width", width - 10)
+      .attr("height", height)
+      .attr("class", "zoomOverlay")
+      .call(drag);
 
-    var xAxis = d3.svg.axis()
-      .scale(x)
-      .orient("bottom");
-
-    var yAxis = d3.svg.axis()
-      .scale(y)
-      .orient("left");
-
-    var line = d3.svg.line()
-      .interpolate("basis")
-      .x(function(d) {
-        return x(d[0]);
-      })
-      .y(function(d) {
-        return y(d[1]);
-      });
 
     var band = svg.append("rect")
       .attr("width", 0)
@@ -104,59 +94,9 @@
       .attr("y", 0)
       .attr("class", "band");
 
-    svg.append("g")
-      .attr("class", "x axis")
-      .call(xAxis)
-      .attr("transform", "translate(0," + height + ")");
-
-    svg.append("g")
-      .attr("class", "y axis")
-      .call(yAxis)
-
-    svg.append("clipPath")
-      .attr("id", "clip")
-      .append("rect")
-      .attr("width", width)
-      .attr("height", height);
-
-    for (idx in data) {
-      svg.append("path")
-        .datum(data[idx])
-        .attr("class", "line line" + idx)
-        .attr("clip-path", "url(#clip)")
-        .style("stroke", colors[idx])
-        .attr("d", line);
-    }
-
-    var zoomOverlay = svg.append("rect")
-      .attr("width", width - 10)
-      .attr("height", height)
-      .attr("class", "zoomOverlay")
-      .call(drag);
-
     var zoomout = svg.append("g");
 
-    zoomout.append("rect")
-      .attr("class", "zoomOut")
-      .attr("width", 75)
-      .attr("height", 40)
-      .attr("x", -12)
-      .attr("y", height + (margin.bottom - 20))
-      .on("click", function() {
-        zoomOut();
-      });
-
-    zoomout.append("text")
-      .attr("class", "zoomOutText")
-      .attr("width", 75)
-      .attr("height", 30)
-      .attr("x", -10)
-      .attr("y", height + (margin.bottom - 5))
-      .text("Zoom Out");
-
-    zoom();
-
-    drag.on("dragend", function() {
+    drag.on("end", function() {
       var pos = d3.mouse(this);
       var x1 = x.invert(bandPos[0]);
       var x2 = x.invert(pos[0]);
@@ -189,6 +129,7 @@
         .attr("y", bandPos[1]);
 
       zoom();
+
     });
 
     drag.on("drag", function() {
@@ -237,20 +178,106 @@
       var t = svg.transition().duration(750);
       t.select(".x.axis").call(xAxis);
       t.select(".y.axis").call(yAxis);
+      t.selectAll(".line").attr("d", line);
 
-      t.selectAll(".line").attr("d", line); 
+    }
+
+    function pullData() {
+      var input;
+      var data = [];
+      xDomain = 0;
+      yDomain = 0;
+      yDomainMin = 0;
+      xDomainMin = 0;
+
+      d3.json("https://gist.github.com/jroetman/9b4c0599a4996edef0ab/raw/c9a433b3e7ea90618be913dd15fbba323e78ea91/testData.json", function(res) {
+        input = res
+        if (Array.isArray(input)) {
+          updateChart(input);
+        }
+      });
+    }
+
+    function updateChart(data) {
+      var xmax, ymax, xmin, ymin;
+
+      d3.selectAll('.line').remove();
+      d3.selectAll(".axis").remove();
+
+      data.forEach((da, idx) => {
+        xmax = da.map(d => d.x).reduce((a, c) => Math.max(a, c))
+        ymax = da.map(d => d.y).reduce((a, c) => Math.max(a, c))
+
+        xmin = da.map(d => d.x).reduce((a, c) => Math.min(a, c))
+        ymin = da.map(d => d.y).reduce((a, c) => Math.min(a, c))
+
+        xDomain = Math.max(xDomain, xmax);
+        yDomain = Math.max(yDomain, ymax);
+        xDomainMin = Math.min(xDomainMin, xmin);
+        yDomainMin = Math.min(yDomainMin, ymin);
+      })
+      xDomain += xDomain * .10;
+      yDomain += yDomain * .10;
+      xDomainMin += xDomainMin * .10;
+      yDomainMin += yDomainMin * .10;
+
+
+      line = d3.line()
+        .x(function(d) {
+          return x(d.x);
+        })
+        .y(function(d) {
+          return y(d.y);
+        });
+
+      zoomArea = {
+        x1: xDomainMin,
+        y1: yDomainMin,
+        x2: xDomain,
+        y2: yDomain
+      };
+
+      x = d3.scaleLinear().range([0, width]).domain([xDomainMin, xDomain]);
+      y = d3.scaleLinear().range([height, 0]).domain([yDomainMin, yDomain]);
+
+      xAxis = d3.axisBottom(x)
+      yAxis = d3.axisLeft(y)
+
+      //UPDATE AXES
+      svg.append("g")
+        .attr("class", "x axis")
+        .call(xAxis)
+        .attr("transform", "translate(0," + height + ")");
+
+      svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+
+      data.forEach((da, idx) => {
+        svg.append("path")
+          .datum(da)
+          .attr("class", "line line" + idx)
+          .attr("clip-path", "url(#clip)")
+          .style("stroke", colors(idx))
+          .attr("d", line);
+      })
+
+      d3.select(".band").raise();
+
+      zoom();
     }
 
     var zoomOut = function() {
-      x.domain([0, xdomain]);
-      y.domain([0, ydomain]);
+      x.domain([xDomainMin, xDomain]);
+      y.domain([yDomainMin, yDomain]);
 
       var t = svg.transition().duration(750);
       t.select(".x.axis").call(xAxis);
       t.select(".y.axis").call(yAxis);
 
-      t.selectAll(".line").attr("d", line);     
+      t.selectAll(".line").attr("d", line);
     }
+
   </script>
-  </body>
+</body>
 </html>
