@@ -10,6 +10,7 @@ If anyone is interested in a more general version (to take in custom data), or w
 
 Update Dec 29th 2017
   - Mashed things together to make it work with v4
-    - Pulling data from json file
-    - Dynamically updating axes, and other properties, in case the testData should change, or I add an upload data feature.
+  - Pulling data from json file (based off request to make it more generic)
+  - Dynamically updating axes, and other properties, in case the testData should change, or I add an upload data feature.
+  - Needs some refactoring
      
